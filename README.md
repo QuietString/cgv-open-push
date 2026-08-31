@@ -93,6 +93,20 @@ https://snapp.wzero.dev/cgv
 <br>
 <br>
 
+## 개발 및 프로젝트 컨텍스트
+
+- 에이전트·개발자용 컨텍스트 인덱스: [Docs/README.md](Docs/README.md)
+- 현재 구현 상태: [Docs/Status/IMPLEMENTATION_STATUS.md](Docs/Status/IMPLEMENTATION_STATUS.md)
+- 확인된 문제와 운영 위험: [Docs/Status/KNOWN_ISSUES.md](Docs/Status/KNOWN_ISSUES.md)
+- 안전한 빌드·검증 절차: [Docs/Technical/BUILD_TEST_RUN.md](Docs/Technical/BUILD_TEST_RUN.md)
+- 진행 중인 장기 작업: [Docs/Work/ACTIVE.md](Docs/Work/ACTIVE.md)
+
+저장소에 추적된 실행 코드는 CGV 리뉴얼 이전의 `v1`입니다. 현재 운영 가능 여부는 위 구현
+상태와 검증 기록을 확인해주세요.
+
+<br>
+<br>
+
 ## License
 
 **AGPL-3.0 license**
