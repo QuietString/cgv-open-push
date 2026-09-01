@@ -20,7 +20,7 @@ bookable schedule data appears.
 - Tracked application source: legacy pre-CGV-renewal implementation under `v1/`
 - Data acquisition: polling a CGV ticket endpoint and extracting XML embedded in a JSON response
 - Change detection: in-memory comparison using `diff_match_patch`
-- Tracked notification implementation: Discord bot with hard-coded target-to-channel mapping
+- Tracked notification implementation: KakaoTalk self-message with OAuth token refresh
 - Observability: rotating log file and a Flask status page on port 5000
 - License: AGPL-3.0
 - Remote: `https://github.com/QuietString/cgv-open-push.git`
@@ -36,7 +36,7 @@ bookable schedule data appears.
 
 - CGV schedule polling and opening-change detection
 - Theater/screen and optional movie-specific targets
-- Discord notification routing in the tracked legacy implementation
+- Personal KakaoTalk "나와의 채팅방" notification delivery
 - Docker packaging and a lightweight status page
 - Future messenger integrations such as Slack are permitted when their configuration and delivery
   semantics are documented and verified.

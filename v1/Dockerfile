@@ -1,17 +1,19 @@
-FROM python:3.10
+FROM python:3.10-slim
 
 LABEL name="cgv-open-push"
 
-WORKDIR /
+WORKDIR /app
 
-COPY * .
+COPY . .
 
-# discord bot token
-ENV DISCORD_BOT_TOKEN=""
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install -r requirements.txt
+RUN mkdir -p /data
+
+VOLUME ["/data"]
 
 ENTRYPOINT ["python"]
 CMD ["cgv_open_push_main.py"]
 
 EXPOSE 5000
+EXPOSE 8765

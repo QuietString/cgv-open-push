@@ -48,36 +48,19 @@ image_by_<a href="https://kr.freepik.com/free-photo/3d-render-notification-bell-
 <br>
 <br>
 
-## 알림 받는 방법!
+## 알림 받는 방법
 
-### Discord 앱을 다운받으세요.
-
-설치 후, 설정에서 Discord 앱 알림을 허용해주세요.
-
-<br>
-
-### 아래 초대 링크를 클릭하여 CGV 예매 오픈 알리미 서버에 접속하세요.
-
-https://snapp.wzero.dev/cgv
-
-> 초대 링크가 동작하지 않는다면 [issues](https://github.com/0w0i0n0g0/cgv-open-push/issues)에 문의를 남겨주세요.
->
-> 최대한 빠르게 업데이트하도록 하겠습니다.
-
-<br>
-
-### 꼭 확인해주세요.
-
-`전체공지` 채널과 `자주묻는질문` 채널을 꼭 정독한 후 이용해주세요.
+현재 저장소의 `v1` 구현은 Discord 대신 카카오톡 공식 **나에게 보내기** API를 사용합니다.
+카카오 디벨로퍼스 앱의 REST API 키·Client Secret과 최초 1회 OAuth 동의가 필요하며, 토큰은
+Git에 포함되지 않는 Docker 데이터 볼륨에 저장합니다. 상세 설정과 검증 명령은
+[빌드·테스트·실행 문서](Docs/Technical/BUILD_TEST_RUN.md)를 확인하세요.
 
 <br>
 <br>
 
 ## 사용 전 반드시 읽어주세요.
 
--  CGV 예매 오픈 알리미는 CGV의 특정 영화관, 특정 영화의 상영 일정을 주기적으로 갱신하여 변동사항을 확인하고, 변동사항이 발생된다면 Discord를 통해 알림을 전송합니다.
-
-- 원활한 운영을 위해 Discord 서버 내에서 예매 오픈 알림을 받는 것 이외에 채널에 메시지를 게시하거나, 서버 운영에 피해가 되는 행동이 발견되면 경고 없이 차단될 수 있습니다. 모든 문의사항은 Github에 게시하여 주시기 바랍니다.
+-  CGV 예매 오픈 알리미는 CGV의 특정 영화관, 특정 영화의 상영 일정을 주기적으로 갱신하여 변동사항을 확인하고, 변동사항이 발생하면 운영자의 카카오톡 `나와의 채팅방`으로 알림을 전송합니다.
 
 - 이 서비스는 CGV와 어떠한 협의없이 제작되었으며, 인터넷을 통해 모두가 접근 가능하고 공개된 경로로만 정보를 취득합니다.
 
@@ -88,7 +71,7 @@ https://snapp.wzero.dev/cgv
 
 ## Stack
 
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![Docker](https://img.shields.io/badge/docker-0db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![Docker](https://img.shields.io/badge/docker-0db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![KakaoTalk](https://img.shields.io/badge/KakaoTalk-FFCD00?style=for-the-badge&logo=kakaotalk&logoColor=000000)
 
 <br>
 <br>

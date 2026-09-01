@@ -18,8 +18,10 @@ source is tracked at this baseline.
 
 | Component | Source | Current responsibility |
 |---|---|---|
-| Coordinator and Discord sender | `v1/cgv_open_push_main.py` | Configure logging, create the shared queue, start child processes, and deliver queued messages to Discord |
-| Target configuration | `v1/cgv_open_push_global_variable.py` | Hold runtime token lookup, Discord channel mapping, CGV request metadata, and target lists |
+| Coordinator and Kakao sender | `v1/cgv_open_push_main.py` | Configure logging, create the shared queue, start child processes, and deliver queued messages through the notifier |
+| Kakao notifier and token store | `v1/cgv_open_push_kakao.py` | Validate Kakao configuration, refresh and persist OAuth tokens, and call the self-message API |
+| Kakao OAuth helper | `v1/cgv_open_push_kakao_auth.py` | Complete the one-time local authorization-code flow and save the initial token set |
+| Target configuration | `v1/cgv_open_push_global_variable.py` | Hold CGV request metadata and target lists |
 | Shared CGV/XML helpers | `v1/cgv_open_push_function.py` | Send CGV requests, decode JSON-wrapped XML, extract fields, remove volatile tags, and launch the status process |
 | Movie watcher | `v1/cgv_open_push_movie.py` | Compare the `PlayDays` fragment for one configured movie target |
 | Screen watcher | `v1/cgv_open_push_screen.py` | Compare sanitized schedule XML for one theater/screen target |
@@ -29,11 +31,10 @@ source is tracked at this baseline.
 
 ```text
 main Python process
-  ├─ status supervisor process
-  │    └─ Flask status subprocess (replaced hourly)
+  ├─ one Flask status-server process
   ├─ one process per configured movie target
   ├─ one process per configured screen target
-  └─ Discord asyncio client and queue consumer
+  └─ blocking queue consumer and Kakao notifier
 
 watcher process
   → HTTP POST to configured CGV endpoint
@@ -41,31 +42,36 @@ watcher process
   → extract embedded XML
   → compare previous in-memory snapshot with new snapshot
   → multiprocessing.Queue([target_name, message])
-  → Discord target-to-channel lookup
-  → channel.send(message)
+  → target-labelled Kakao text template
+  → Kakao "나에게 보내기" REST endpoint
 ```
 
 At the current baseline, all movie targets are commented out and nine screen targets are configured.
-Each watcher performs an initial request, waits approximately five seconds, requests again, and then
-waits another 295 seconds per loop. Target process starts are staggered by one second.
+Each watcher establishes an initial in-memory baseline and then polls every 300 seconds. Request or
+parse failures retry in the same worker after 60 seconds, doubling up to a 900-second ceiling. Target
+process starts are staggered by one second.
 
 ## State and delivery semantics
 
 - Previous CGV responses exist only in watcher memory; there is no durable snapshot database.
 - A process restart establishes the current response as a new baseline and does not replay downtime.
-- Watchers enqueue two positional values: target name and Discord-formatted text.
-- The queue is process-safe, but the sender checks `Queue.empty()` before a non-blocking read; that
-  observation is not a reliable synchronization contract across processes.
-- A message is removed before Discord delivery and is not durably retried after a send failure.
-- Target configuration, transport configuration, HTTP metadata, and secrets are coupled in one module.
+- Watchers enqueue two positional values: target name and plain alert text.
+- The coordinator uses a timed blocking queue read and retries delivery three times with increasing
+  delay. Messages are not persisted across process or host failure.
+- The access and refresh tokens live in a JSON file outside the image. A refresh persists a rotated
+  refresh token when Kakao returns one.
+- Kakao REST key, Client Secret, redirect URI, token path, and product link come from environment
+  variables. CGV request metadata remains tracked in the target module.
 
 ## Packaging and external boundaries
 
-- `v1/Dockerfile` expects `v1/` itself to be the Docker build context because it uses `COPY * .`.
-- The image currently uses the mutable `python:3.10` tag and installs four pinned top-level packages.
-- `DISCORD_BOT_TOKEN` is read during module import and must exist in the environment.
-- Port 5000 is exposed by the image. The Flask development server is the tracked status server.
-- CGV and Discord are external systems; their current contracts must be verified independently.
+- `v1/Dockerfile` expects `v1/` itself to be the Docker build context and copies that context into
+  `/app`; `.dockerignore` excludes credentials, local token data, tests, caches, and logs.
+- The image uses `python:3.10-slim` and installs three pinned top-level packages.
+- A named or bind-mounted `/data` volume preserves `kakao-token.json` across container replacement.
+- Ports 5000 and 8765 are exposed for the status page and one-time OAuth callback respectively. Run
+  commands bind both to localhost.
+- CGV and Kakao are external systems; their current contracts must be verified independently.
 
 ## Intended refactoring boundaries
 

@@ -8,13 +8,13 @@
 >
 > Verified against: `Docs/Work/Tasks/` and current working tree
 
-There are no active cross-session implementation tasks recorded.
+One cross-session implementation task is active.
 
 ## Task table
 
 | Task | State | Owner | Scope | Last updated |
 |---|---|---|---|---|
-| _None_ | - | - | - | - |
+| [`TASK-0001`](Tasks/TASK-0001-kakao-self-message.md) | Active | Codex | Kakao OAuth, sender, worker safety, Docker, tests, docs | 2026-09-01 |
 
 Create `Tasks/TASK-####-short-name.md` from
 [`../Templates/TASK_TEMPLATE.md`](../Templates/TASK_TEMPLATE.md) and replace the `_None_` row when a

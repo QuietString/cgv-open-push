@@ -1,19 +1,8 @@
-import json
 import re
-import subprocess
-import time
 import requests
 import logging
-import datetime
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
-
-def run_cgv_open_push_status():
-    while True:
-        save_log_info("cgv_open_push_status.py restarted.")
-        process = subprocess.Popen(['python', 'cgv_open_push_status.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        time.sleep(3600)
-        process.kill()
 
 # 로그 저장
 def save_log_info(log, is_log_file=False):
@@ -46,17 +35,23 @@ def get_request_to_cgv_api(url, cookies, headers, json_data, target_name):
         cookies = cookies,
         headers = headers,
         json = json_data,
-        verify = False,
+        timeout = (5, 15),
     )
-    # 응답 본문 추출
-    response_body = response.content
-    save_log_info(f'{target_name} response delay : {calculate_response_delay(response)}', True)
-    # UTF-8 디코딩
-    response_text = response_body.decode('utf-8-sig')
-    # JSON 데이터 파싱
-    data = json.loads(response_text)
-    # DATA 값 추출 및 디코딩
-    xml_string = data['d']['DATA']
+    response.raise_for_status()
+    content_type = response.headers.get('Content-Type', '').lower()
+    if 'json' not in content_type:
+        raise ValueError(
+            f"{target_name} CGV response must be JSON, got {content_type or 'unknown'}"
+        )
+    if response.headers.get('Date'):
+        save_log_info(f'{target_name} response delay : {calculate_response_delay(response)}', True)
+    data = response.json()
+    try:
+        xml_string = data['d']['DATA']
+    except (KeyError, TypeError) as error:
+        raise ValueError(f"{target_name} CGV response schema is missing d.DATA") from error
+    if not isinstance(xml_string, str):
+        raise ValueError(f"{target_name} CGV response d.DATA must be a string")
     # 응답결과 리턴
     return xml_string
 

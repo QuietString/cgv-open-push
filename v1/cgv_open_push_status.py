@@ -1,5 +1,6 @@
-from flask import Flask, request
+from flask import Flask, jsonify, request
 from datetime import datetime
+from markupsafe import escape
 
 def get_time_difference_from_log_file(log_file):
    try:
@@ -26,12 +27,11 @@ def last_n_lines_from_log_file(log_file, n=50):
                     line = line.replace(':INFO:', '\n')
                 log = line.strip() + '\n\n' + log
     except Exception as e:
-        return e
-    finally:
-        return log
+        return f"Status log unavailable: {e}"
+    return log
 
 def check_user_is_mobile_or_not():
-   user_agent = request.headers.get('User-Agent')
+   user_agent = request.headers.get('User-Agent', '')
    if 'Android' in user_agent or 'iPhone' in user_agent or 'iPad' in user_agent:
       return True # 모바일
    else:
@@ -141,11 +141,20 @@ def home():
       </div>
       <h2>Server Log</h2>
       <div id="log">
-         <pre>{log}</pre>
+         <pre>{escape(log)}</pre>
       </div>
    </body>
    </html>
    """
 
-if __name__ == '__main__':  
-   app.run('0.0.0.0',port=5000,debug=False)
+@app.route('/healthz')
+def health():
+   time_diff = get_time_difference_from_log_file("cgv-open-push.log")
+   healthy = isinstance(time_diff, float) and time_diff < 600
+   return jsonify({"status": "ok" if healthy else "stale"}), 200 if healthy else 503
+
+def run_status_server():
+   app.run('0.0.0.0', port=5000, debug=False, use_reloader=False)
+
+if __name__ == '__main__':
+   run_status_server()

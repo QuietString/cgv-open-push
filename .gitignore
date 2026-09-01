@@ -16,6 +16,7 @@ venv/
 
 # Runtime output
 *.log
+v1/data/
 
 # Editor and operating-system files
 .idea/

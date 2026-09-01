@@ -8,7 +8,7 @@
 >
 > Verified against: `Docs/Decisions/`
 
-No ADRs have been accepted yet.
+One ADR has been accepted.
 
 Create an ADR from [`../Templates/ADR_TEMPLATE.md`](../Templates/ADR_TEMPLATE.md) when a decision:
 
@@ -25,4 +25,4 @@ when their rationale remains useful. Small local implementation choices do not n
 
 | ADR | State | Decision date | Summary |
 |---|---|---|---|
-| _None_ | - | - | - |
+| [`ADR-0001`](ADR-0001-kakao-self-message.md) | Accepted | 2026-09-01 | Use Kakao self-message as the notification transport |

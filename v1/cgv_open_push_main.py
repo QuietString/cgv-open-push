@@ -1,73 +1,141 @@
-import discord
+import logging
+import multiprocessing
 import queue
 import time
-import atexit
-import multiprocessing
-from cgv_open_push_function import *
-from cgv_open_push_global_variable import *
+from logging.handlers import RotatingFileHandler
+
+from cgv_open_push_function import save_log_error, save_log_info
+from cgv_open_push_global_variable import (
+    movie_cookies,
+    movie_headers,
+    movie_json_data,
+    movie_target_name,
+    movie_url,
+    screen_cookies,
+    screen_headers,
+    screen_json_data,
+    screen_target_name,
+    screen_url,
+)
+from cgv_open_push_kakao import KakaoConfig, KakaoNotifier
 from cgv_open_push_movie import movie_main
 from cgv_open_push_screen import screen_main
-from logging.handlers import RotatingFileHandler
-from discord.ext import tasks
+from cgv_open_push_status import run_status_server
 
-# 디스코드 봇
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
-message_queue = multiprocessing.Queue()
 
-@client.event
-async def on_ready():
-    channel_id = discord_channel_id_dictionary["LOG"]
-    channel = client.get_channel(channel_id)
-    await channel.send('cgv-open-push-discord-bot connected...')
-    await send_message.start()
+def configure_logging():
+    handlers = [
+        RotatingFileHandler(
+            "cgv-open-push.log",
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+    ]
+    logging.basicConfig(
+        handlers=handlers,
+        level=logging.INFO,
+        format="%(asctime)s:%(levelname)s:%(message)s",
+    )
 
-@tasks.loop(seconds=1)
-async def send_message():
-    if not message_queue.empty():
-        message = message_queue.get(0)
-        channel_id = discord_channel_id_dictionary.get(message[0])
-        print(f"send_message to {message[0]} : {message[1]}, channel_id : {channel_id}")
-        if channel_id:
-            channel = client.get_channel(channel_id)
-            await channel.send(message[1])
 
-def run_cgv_open_push_discord_bot():
-    client.run(discord_bot_token)
+def start_processes(message_queue):
+    processes = []
 
-# 프로세스 배열
-processes = []
+    status_process = multiprocessing.Process(
+        target=run_status_server,
+        name="status-server",
+    )
+    processes.append(status_process)
+    status_process.start()
 
-# 로그 저장 (최대 5MB씩 3개 백업본 저장)
-handlers = [RotatingFileHandler('cgv-open-push.log', maxBytes=5*1024*1024, backupCount=3, encoding='utf-8')]
-logging.basicConfig(handlers=handlers, level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+    for index, json_data in enumerate(movie_json_data):
+        process = multiprocessing.Process(
+            target=movie_main,
+            args=(
+                movie_url,
+                movie_cookies,
+                movie_headers,
+                json_data,
+                movie_target_name[index],
+                message_queue,
+            ),
+            name=f"movie-{movie_target_name[index]}",
+        )
+        processes.append(process)
+        process.start()
+        time.sleep(1)
 
-# cgv_open_push_status.py 실행
-p = multiprocessing.Process(target=run_cgv_open_push_status)
-processes.append(p)
-p.start()
-time.sleep(1)
+    for index, json_data in enumerate(screen_json_data):
+        process = multiprocessing.Process(
+            target=screen_main,
+            args=(
+                screen_url,
+                screen_cookies,
+                screen_headers,
+                json_data,
+                screen_target_name[index],
+                message_queue,
+            ),
+            name=f"screen-{screen_target_name[index]}",
+        )
+        processes.append(process)
+        process.start()
+        time.sleep(1)
 
-# 서버 시작 알림 보내기
-message_queue.put(["LOG", "cgv-open-push server started..."])
+    return processes
 
-# 영화관 프로세스 실행
-for data in enumerate(movie_json_data):
-    p = multiprocessing.Process(target=movie_main, args=(movie_url, movie_cookies, movie_headers, data[1], movie_target_name[data[0]], message_queue))
-    processes.append(p)
-    p.start()
-    time.sleep(1)
 
-# 특별관 프로세스 실행
-for data in enumerate(screen_json_data):
-    p = multiprocessing.Process(target=screen_main, args=(screen_url, screen_cookies, screen_headers, data[1], screen_target_name[data[0]], message_queue))
-    processes.append(p)
-    p.start()
-    time.sleep(1)
+def stop_processes(processes):
+    for process in processes:
+        if process.is_alive():
+            process.terminate()
+    for process in processes:
+        process.join(timeout=10)
 
-# 종료 시 서버 종료 알림 보내기
-def send_stopped_message():
-    message_queue.put(["LOG", "cgv-open-push server stopped..."])
-atexit.register(send_stopped_message)
 
-run_cgv_open_push_discord_bot()
+def send_with_retry(notifier, target_name, message, attempts=3):
+    for attempt in range(1, attempts + 1):
+        try:
+            notifier.send(target_name, message)
+            save_log_info(f"Kakao message sent for {target_name}", True)
+            return
+        except Exception as error:
+            save_log_error(
+                f"Kakao message attempt {attempt}/{attempts} failed for {target_name}: {error}"
+            )
+            if attempt < attempts:
+                time.sleep(5 * attempt)
+    raise RuntimeError(f"Kakao message delivery failed for {target_name}")
+
+
+def run_message_loop(message_queue, notifier, processes):
+    send_with_retry(notifier, "LOG", "cgv-open-push server started...")
+    while True:
+        try:
+            target_name, message = message_queue.get(timeout=1)
+        except queue.Empty:
+            failed = [process.name for process in processes if process.exitcode not in {None, 0}]
+            if failed:
+                raise RuntimeError(f"Child process stopped unexpectedly: {', '.join(failed)}")
+            continue
+        send_with_retry(notifier, target_name, message)
+
+
+def main():
+    configure_logging()
+    notifier = KakaoNotifier(KakaoConfig.from_env())
+    message_queue = multiprocessing.Queue()
+    processes = start_processes(message_queue)
+
+    try:
+        run_message_loop(message_queue, notifier, processes)
+    except KeyboardInterrupt:
+        save_log_info("Shutdown requested", True)
+    finally:
+        stop_processes(processes)
+
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    main()
