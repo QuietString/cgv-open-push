@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-01
 - Owners/approvers: Project owner
-- Related tasks/context: [`../Work/Tasks/TASK-0001-kakao-self-message.md`](../Work/Tasks/TASK-0001-kakao-self-message.md), [`../Technical/ARCHITECTURE.md`](../Technical/ARCHITECTURE.md)
+- Related tasks/context: [`../Work/Archive/TASK-0001-kakao-self-message.md`](../Work/Archive/TASK-0001-kakao-self-message.md), [`../Technical/ARCHITECTURE.md`](../Technical/ARCHITECTURE.md)
 - Supersedes/superseded by: N/A
 
 ## Context

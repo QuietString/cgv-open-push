@@ -4,7 +4,7 @@
 >
 > Owner: Engineering
 >
-> Last verified: 2026-09-01
+> Last verified: 2026-09-03
 >
 > Verified against: `v1/*.py`, `v1/requirements.txt`, and `v1/Dockerfile`
 

@@ -4,9 +4,9 @@
 >
 > Owner: Engineering
 >
-> Last verified: 2026-09-01
+> Last verified: 2026-09-03
 >
-> Verified against: Docker Desktop with WSL 2, `v1/Dockerfile`, and the 2026-08-31 smoke test
+> Verified against: Docker engine 29.7.2, `v1/Dockerfile`, and the 2026-09-03 limited container tests
 
 ## Prerequisites
 
@@ -36,19 +36,21 @@ python -m unittest discover -s tests -v
 Pop-Location
 ```
 
-The 2026-09-01 suite contains eight CGV contract, Kakao token/delivery, and worker-retry tests.
+The 2026-09-01 suite contains nine CGV contract, Kakao token/delivery, and worker-retry tests.
 
 ## Build the legacy image
 
 Use `v1/` as the build context:
 
 ```powershell
-docker build -t cgv-open-push:test .\v1
+docker build --pull -t cgv-open-push:test .\v1
 ```
 
-The 2026-08-31 baseline image built successfully. The Kakao change has not yet been rebuilt because the
-local Docker Desktop backend is blocked by an inaccessible stale runtime socket. `.dockerignore`
-excludes `.env`, local token data, tests, caches, and logs from the image context.
+The 2026-09-03 Kakao image build succeeded on Docker engine 29.7.2. The resulting local image ID is
+`sha256:9bc0586147c9801da1a948e49920110b65039d6cfc38ce73b5f028c80c0e10c6` and its size is
+52,989,598 bytes. An in-image check compiled and imported all nine Python modules and confirmed that
+`.env` and `data/kakao-token.json` were absent. `.dockerignore` excludes credentials, local token
+data, tests, caches, and logs from the image context.
 
 ## Configure Kakao credentials
 
@@ -117,13 +119,50 @@ docker run --rm --entrypoint python cgv-open-push:test -c "import requests; impo
 Baseline result on 2026-08-31: HTTP 404, `text/html`, and an HTML error document. Update the endpoint,
 request contract, and this evidence together when the result changes.
 
-## Full-service safety gate
+## Resource-limited failure smoke without messenger delivery
 
-The recursive `os.execl` defect has been removed and focused failure injection passed, but full
-container proof is still pending. The 2026-08-31 baseline reached 2,136 Python processes in about 12
-seconds; keep strict resource limits until a new smoke test proves bounded process and request counts.
+The recursive `os.execl` defect is resolved. On 2026-09-03, the following test held the full process
+tree at 11 processes and zero container restarts across two failed requests from each of nine workers.
+It substitutes `KakaoNotifier.send` in memory so no startup or alert message is sent, and it does not
+modify the image:
 
-After the restart defect is fixed and tested, use explicit resource limits for the first smoke test:
+```powershell
+docker run -d --rm `
+  --name cgv-open-push-failure-smoke `
+  --pids-limit 32 `
+  --cpus 1 `
+  --memory 256m `
+  --read-only `
+  --tmpfs /tmp:rw,noexec,nosuid,size=32m `
+  -w /tmp `
+  -e PYTHONDONTWRITEBYTECODE=1 `
+  -e PYTHONUNBUFFERED=1 `
+  -e PYTHONPATH=/app `
+  -e KAKAO_REST_API_KEY=00000000000000000000000000000000 `
+  -e KAKAO_CLIENT_SECRET=11111111111111111111111111111111 `
+  -e KAKAO_REDIRECT_URI=http://localhost:8765/oauth/kakao/callback `
+  -e KAKAO_TOKEN_FILE=/tmp/not-used.json `
+  -e KAKAO_MESSAGE_LINK_URL=https://github.com `
+  --stop-timeout 10 `
+  -p 127.0.0.1:5001:5000 `
+  --entrypoint python `
+  cgv-open-push:test `
+  -c "import cgv_open_push_main as m; m.KakaoNotifier.send=lambda self,target_name,message:{'result_code':0}; m.main()"
+
+Start-Sleep -Seconds 75
+docker top cgv-open-push-failure-smoke -eo pid,ppid,comm
+docker logs cgv-open-push-failure-smoke
+docker stop --timeout 10 cgv-open-push-failure-smoke
+```
+
+Expected evidence after 75 seconds is 11 processes, no restart, and exactly 18 target error lines. The
+configured legacy CGV URL currently redirects to `http://img.cgv.co.kr/System_Notice.html` and returns
+404, so this test proves bounded failure behavior rather than functional polling.
+
+## Full service
+
+Starting the normal service sends a startup message to the authenticated Kakao chat. Obtain explicit
+approval before the first normal run. Keep explicit resource limits and localhost-only status binding:
 
 ```powershell
 $KakaoDataPath = (Resolve-Path .\v1\data).Path
@@ -138,10 +177,10 @@ docker run --rm `
   cgv-open-push:test
 ```
 
-Run it in the foreground for the first test. In another terminal inspect `docker logs` and the status
-page, then stop with `docker stop cgv-open-push-test`. The configured CGV endpoint still returns 404,
-so this test can prove bounded failure behavior but not functional schedule polling. Do not add a
-Docker restart policy until failure behavior and graceful shutdown have been verified.
+Run it in the foreground for the first normal test. In another terminal inspect `docker logs` and the
+status page, then stop with `docker stop --timeout 10 cgv-open-push-test`. The configured CGV endpoint
+still returns 404, so normal operation cannot yet detect schedule changes. Do not add a Docker restart
+policy until graceful shutdown and the repaired CGV contract have been verified.
 
 ## Minimum verification by change type
 

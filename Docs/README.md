@@ -4,9 +4,9 @@
 >
 > Owner: Project owner
 >
-> Last verified: 2026-09-01
+> Last verified: 2026-09-03
 >
-> Verified against: current Git tree, `README.md`, `v1/`, and 2026-08-31 Docker smoke test
+> Verified against: current Git tree, `README.md`, `v1/`, and 2026-09-03 Docker validation
 
 This directory is the repository's durable, version-controlled project memory. It stores project
 intent, architecture, implementation summaries, confirmed issues, decisions, and cross-session

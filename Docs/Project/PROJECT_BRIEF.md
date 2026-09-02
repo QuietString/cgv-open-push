@@ -4,7 +4,7 @@
 >
 > Owner: Project owner
 >
-> Last verified: 2026-09-01
+> Last verified: 2026-09-03
 >
 > Verified against: `README.md`, `v1/`, Git history, and current repository contents
 

@@ -1,8 +1,8 @@
 # TASK-0001: Replace Discord delivery with Kakao self-message
 
-- Status: Active
+- Status: Done
 - Owner: Codex
-- Last updated: 2026-09-01 22:46 KST
+- Last updated: 2026-09-03 00:33 KST
 - Scope: Kakao OAuth/token storage, notification delivery, worker safety, Docker setup, tests, and related documentation
 - Related context: [`../../Project/PROJECT_BRIEF.md`](../../Project/PROJECT_BRIEF.md), [`../../Technical/ARCHITECTURE.md`](../../Technical/ARCHITECTURE.md), [`../../Status/KNOWN_ISSUES.md`](../../Status/KNOWN_ISSUES.md), [`../../Decisions/ADR-0001-kakao-self-message.md`](../../Decisions/ADR-0001-kakao-self-message.md)
 
@@ -21,7 +21,7 @@ tokens safely outside Git, and prove delivery with one explicit test message to 
 - [x] Unit tests cover token refresh/persistence and message payload/error handling.
 - [x] One owner-approved test message reaches the owner's Kakao "나와의 채팅방".
 - [x] Documentation and context validation are current.
-- [ ] The changed Docker image builds and a resource-limited failure smoke test remains bounded.
+- [x] The changed Docker image builds and a resource-limited failure smoke test remains bounded.
 
 ## Current verified state
 
@@ -39,6 +39,10 @@ tokens safely outside Git, and prove delivery with one explicit test message to 
 - Live CGV polling remains blocked by HTTP 404 independently of notification delivery.
 - The recursive watcher restart path was removed and failure injection proved 60/120/240-second
   same-worker retry delays.
+- Docker engine 29.7.2 rebuilt `cgv-open-push:test`. A resource-limited full-process smoke remained at
+  11 processes and zero restarts across exactly two failed attempts for each of nine workers.
+- A separate limited container refreshed the expired Kakao access token through the mounted `/data`
+  path without sending a message.
 
 ## Decisions made
 
@@ -68,17 +72,21 @@ tokens safely outside Git, and prove delivery with one explicit test message to 
 - Result and timestamp: `/` 200; empty-log `/healthz` 503 stale, 2026-09-01 22:23 KST
 - Command/tool: Kakao `/v2/user/scopes` and isolated `cgv_open_push_kakao_send_test.py`
 - Result and timestamp: `talk_message` agreed; Kakao returned `result_code: 0`, 2026-09-01 22:43 KST
-- Remaining uncertainty: Docker rebuild and container smoke testing are incomplete.
+- Command/tool: `docker build --pull -t cgv-open-push:test .\v1`
+- Result and timestamp: build succeeded; nine Python modules passed in-image compile/import and secret
+  exclusion checks, 2026-09-03 00:27 KST
+- Command/tool: status, full-process failure, and token-refresh containers with CPU, memory, PID,
+  read-only-root, localhost-binding, and automatic-removal controls
+- Result and timestamp: status contracts passed; 11 processes, zero restarts, and exactly 18 worker
+  errors across two attempts; token refresh persisted, 2026-09-03 00:33 KST
+- Remaining uncertainty: the current CGV request contract remains unresolved under ISSUE-001 and is
+  outside this completed notification-transport task.
 
 ## Blockers and risks
 
-- Docker Desktop 4.88.1 exits because it cannot remove the exact stale runtime socket
-  `C:\Users\quietstring\AppData\Local\Docker\run\sailor-ingest.sock`; workspace policy prevented
-  Codex from deleting that external file.
 - CGV polling cannot be end-to-end tested until ISSUE-001 is resolved.
 
 ## Exact next steps
 
-1. Remove the exact stale Docker runtime socket after Docker Desktop is fully stopped, restart Docker,
-   build the image, and run the resource-limited tests.
-2. Repair the current CGV request contract under ISSUE-001 before claiming end-to-end operation.
+1. Repair the current CGV request contract under ISSUE-001 before claiming end-to-end operation.
+2. Add current-contract change-detection fixtures and verify one queued notification per addition.
