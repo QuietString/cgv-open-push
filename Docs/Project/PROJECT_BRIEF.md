@@ -6,7 +6,7 @@
 >
 > Last verified: 2026-09-03
 >
-> Verified against: `README.md`, `v1/`, Git history, and current repository contents
+> Verified against: `README.md`, `v1/`, current CGV page assets, bounded live probes, and Git history
 
 ## One-sentence purpose
 
@@ -17,9 +17,10 @@ bookable schedule data appears.
 
 - Project name: `cgv-open-push`
 - Runtime: Python 3.10 in the provided Dockerfile
-- Tracked application source: legacy pre-CGV-renewal implementation under `v1/`
-- Data acquisition: polling a CGV ticket endpoint and extracting XML embedded in a JSON response
-- Change detection: in-memory comparison using `diff_match_patch`
+- Tracked application source: current CGV JSON schedule implementation under `v1/`
+- Data acquisition: bounded GET requests to CGV's same-origin booking BFF with a browser-compatible
+  TLS client
+- Change detection: in-memory comparison of stable schedule identity tuples
 - Tracked notification implementation: KakaoTalk self-message with OAuth token refresh
 - Observability: rotating log file and a Flask status page on port 5000
 - License: AGPL-3.0

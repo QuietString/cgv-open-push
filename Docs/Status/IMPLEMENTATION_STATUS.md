@@ -6,7 +6,7 @@
 >
 > Last verified: 2026-09-03
 >
-> Verified against: current Git tree, source inspection, tests, 2026-09-03 Docker build, and resource-limited smoke output
+> Verified against: current Git tree, first-party CGV page assets, bounded live probes, 15 tests, the 2026-09-03 Docker build, and resource-limited smoke output
 
 ## Status matrix
 
@@ -14,29 +14,31 @@
 |---|---|---|---|
 | Agent context system | Verified | root `AGENTS.md`, indexed context files, templates, and validator; validator passed on 2026-09-01 | Re-run after context-policy or document-structure changes |
 | Python syntax | Verified | all nine `v1/*.py` files compiled successfully on 2026-09-01 | Re-run after Python changes |
-| Docker toolchain | Verified | Docker engine 29.7.2 built `cgv-open-push:test` from commit `2e7f9da`; image validation found nine importable Python modules and no `.env` or token file | Rebuild after dependency or Dockerfile changes |
-| CGV polling | Blocked | configured endpoint returned HTTP 404 HTML instead of JSON on a bounded 2026-08-31 probe | Discover and document the current supported request contract |
-| Change detection | Implemented | movie and screen XML diff paths exist in source | Add fixture tests and verify semantics against current responses |
-| Worker supervision | Verified | resource-limited container held 11 processes and zero restarts across two failure attempts per each of nine workers; exactly 18 errors were observed | Retain limits in deployment and re-test after process-model changes |
+| Docker toolchain | Verified | Docker engine 29.7.2 built image `sha256:a7d6f98...`; the final image ran all tests and a bounded live probe | Rebuild after dependency or Dockerfile changes |
+| CGV polling | Verified | final-image probes returned HTTP 200 JSON, parsed 126 Yongsan schedules including six IMAX schedules, and accepted an empty date as `[]` | Re-probe after endpoint, query, TLS-client, or schema changes |
+| Change detection | Verified | minimized current-response fixture proves target filtering, booking-control transition, and exactly one queued notification | Expand fixtures if stable format codes replace keyword filters |
+| Worker supervision | Verified | final limited container held one main, one status, and one schedule process with zero restarts while completing four successful 15-second polls | Retain limits and re-test after process-model or retry changes |
 | Kakao self-message | Verified | owner-confirmed test delivery plus a 2026-09-03 container token refresh through the mounted `/data` path | Monitor refresh-token expiry and reauthorize when required |
 | Discord delivery | Deprecated | Discord dependency, token lookup, channel routing, and sender were removed in favor of ADR-0001 | None unless multi-transport support is requested |
 | Slack delivery | Planned | feasibility assessed; no Slack source or configuration is tracked | Define notifier boundary and select webhook or Web API contract |
 | Status page | Partial | limited containers returned `/` 200, empty-log `/healthz` 503, and active-log `/healthz` 200 through `127.0.0.1`; log text is escaped | Add authentication before any non-local exposure |
-| Automated tests | Partial | nine focused CGV contract, Kakao, and worker-retry tests passed on 2026-09-01 | Add fixture tests for change detection |
-| Production operation | Blocked | the configured CGV endpoint still returns HTTP 404 and change detection lacks current-contract fixtures | Satisfy the remaining project brief recovery criteria |
+| Automated tests | Verified | 15 focused CGV contract, current fixture/change detection, Kakao, and worker-retry tests passed in the final image | Add coverage with each material behavior change |
+| Production operation | Partial | all recovery criteria passed individually and a one-target no-message container passed; the full default target set plus real Kakao delivery has not been run together | Run the first full deployment in the foreground with owner approval for its startup message |
 
 `Implemented` means code or documentation exists but the required current behavior has not been proven.
 Use `Verified` only when reproducible evidence has passed after the relevant change.
 
 ## Current tracked footprint
 
-- Application versions: legacy `v1` only
+- Application versions: renewed CGV contract under historical directory name `v1`
 - Python source files: 9
 - Active movie-specific targets: 0
 - Active screen targets: 9
+- Unique CGV sites per default cycle: 6
+- Default schedule horizon: 14 days with one-second sequential request spacing
 - Notification transports: Kakao self-message only
 - Durable state store: mounted Kakao OAuth token JSON only; CGV snapshots remain in memory
-- Automated tests: 9 focused unit tests in 3 files
+- Automated tests: 15 focused unit tests in 4 files plus one minimized JSON fixture
 - Container orchestration file: none
 
 ## Baseline validation record
@@ -67,7 +69,7 @@ On 2026-09-01:
 - Live Kakao delivery: isolated sender exited 0 after Kakao returned `result_code: 0`; the owner then
   confirmed the exact test message was visible in `나와의 채팅방`
 
-## Docker validation record
+## Kakao migration Docker validation record
 
 On 2026-09-03:
 
@@ -84,3 +86,25 @@ On 2026-09-03:
 - Token smoke: ignored host token data mounted at `/data`; expired access token refreshed and persisted
   successfully without sending a Kakao message
 - All temporary test containers were stopped and removed; the rebuilt image remains locally available
+
+## Current CGV contract validation record
+
+On 2026-09-03:
+
+- First-party page code maps the backend schedule operation to the same-origin
+  `/api/v1/booking/searchMovScnInfo` BFF and supplies `coCd`, `siteNo`, `scnYmd`, and
+  `rtctlScopCd=08`
+- A normal PowerShell HTTP request returned 403; pinned `curl_cffi` with `impersonate="chrome"`
+  returned HTTP 200 and `application/json`
+- The public theater-list response verified site numbers for Yongsan, Yeouido, Centum City, Seomyeon,
+  Yeongdeungpo Times Square, and Wangsimni
+- A current Yongsan request returned 126 schedules; the target filter found six IMAX schedules
+- A disabled Yongsan date returned `statusCode=0` with an empty `data` list
+- Final image: `sha256:a7d6f98f3743945648f8482362a0e91682198b9831e399de0f7c4cd9dda3bf43`,
+  67,210,080 bytes
+- Final-image unit suite: 15 tests passed
+- No-message runtime smoke: read-only root, 0.75 CPU, 256 MiB, PID limit 16, localhost status binding;
+  three processes, zero restarts, `/` 200, and `/healthz` 200
+- The final limited run completed four successful 15-second Yongsan IMAX polls with a stable count of
+  six and no queued schedule change
+- Temporary probe and smoke containers were removed; the rebuilt image remains locally available

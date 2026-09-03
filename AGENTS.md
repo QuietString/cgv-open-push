@@ -5,8 +5,8 @@
 - `cgv-open-push` is a Python service that polls CGV reservation data and publishes opening alerts.
 - Repository files are the durable cross-session memory. Chat history is not a source of truth.
 - Start at `Docs/README.md` and load only the documents relevant to the current task.
-- The tracked implementation is the legacy pre-renewal version under `v1/`. Do not describe it as
-  operational without current verification.
+- The tracked implementation under `v1/` uses the renewed CGV JSON schedule contract. Do not
+  describe a target set or deployment as operational beyond the validation recorded in `Docs/Status/`.
 
 ## Session startup
 
@@ -30,19 +30,18 @@ Before changing files:
 - Runtime claims: reproducible build, test, bounded HTTP probe, and container output.
 
 When documentation and implementation disagree, preserve stated intent, record the drift, and
-correct mutable status claims. Do not silently redefine intent to match legacy code.
+correct mutable status claims. Do not silently redefine intent to match code drift.
 
 ## Safety and working rules
 
 - Keep changes scoped to the requested task and preserve unrelated user changes.
 - Never commit bot tokens, webhook URLs, session credentials, `.env` contents, or other secrets.
-- Treat CGV endpoints, cookies, request payloads, and response schemas as mutable external behavior.
+- Treat CGV endpoints, query parameters, TLS compatibility, and response schemas as mutable external
+  behavior.
 - Use bounded requests with explicit timeouts for diagnostics. Avoid high-frequency or parallel probes.
-- Do not run the unmodified full `v1` service while `ISSUE-002` in
-  `Docs/Status/KNOWN_ISSUES.md` is open. Its worker restart path can create an exponential process and
-  request storm. Use a single-request probe, or first repair the restart behavior.
-- When full container testing becomes safe, apply CPU, memory, PID, and restart limits appropriate to
-  the test and bind the status port to localhost unless public exposure is explicitly required.
+- Apply CPU, memory, PID, and restart limits to container tests. Bind the status port to localhost
+  unless public exposure is explicitly required, and disable real messenger delivery for CGV-only
+  smoke tests.
 - Do not commit, push, rewrite history, or modify remote state unless the user requests it.
 
 ## Work and decision records

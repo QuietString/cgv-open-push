@@ -8,8 +8,6 @@
 >
 > Verified against: `Docs/Work/Tasks/` and current working tree
 
-There are no active cross-session implementation tasks recorded.
-
 ## Task table
 
 | Task | State | Owner | Scope | Last updated |

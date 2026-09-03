@@ -1,304 +1,105 @@
-##################################################
-# cgv_open_push_movie.py
+import os
 
-movie_url = 'http://ticket.cgv.co.kr/CGV2011/RIA/CJ000.aspx/CJ_TICKET_SCHEDULE_TOTAL_PLAY_YMD'
 
-movie_cookies = {
-    '_INSIGHT_CK_1': 'f1d83d00493551cd7875517dd21cf81d|5e76eb13a569e162f1a8517dd21cf81d:1705916707000',
-    'WMONID': 'zvGaitKgTbw',
-    '_gid': 'GA1.3.895218779.1709345361',
-    'CgvPopAd-ticket': '^%^uA257^%^uA24D^%^uA248^%^uA251^%^uA24C^%^uA25C',
-    '_gat_UA-47951671-5': '1',
-    '_gat_UA-47951671-7': '1',
-    '_gat_UA-47126437-1': '1',
-    '_gat': '1',
-    'ASP.NET_SessionId': '3qi04s2s5lgd33kmszdarrvp',
-    '_ga_559DE9WSKZ': 'GS1.1.1709348096.22.1.1709348100.56.0.0',
-    '_ga': 'GA1.1.1033028224.1705195852',
-    '_ga_SSGE1ZCJKG': 'GS1.3.1709348096.23.1.1709348100.56.0.0',
+CGV_API_URL = "https://cgv.co.kr/api/v1/booking/searchMovScnInfo"
+CGV_COMPANY_CODE = "A420"
+CGV_HEADERS = {
+    "Accept": "application/json",
+    "Accept-Language": "ko-KR",
+    "Referer": "https://cgv.co.kr/cnm/movieBook/cinema",
 }
 
-movie_headers = {
-    'Accept': 'application/json, text/javascript, */*; q=0.01',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Content-Type': 'application/json',
-    'Origin': 'http://ticket.cgv.co.kr',
-    'Pragma': 'no-cache',
-    'Referer': 'http://ticket.cgv.co.kr/Reservation/Reservation.aspx?MOVIE_CD=&MOVIE_CD_GROUP=&PLAY_YMD=&THEATER_CD=&PLAY_NUM=&PLAY_START_TM=&AREA_CD=&SCREEN_CD=&THIRD_ITEM=&SCREEN_RATING_CD=',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'X-Requested-With': 'XMLHttpRequest',
-}
 
-# 변경사항을 확인할 타겟의 json_data
-movie_json_data = [
-    # # 듄-파트2 용산아이파크몰 IMAX관
-    # {
-    #     "REQSITE": "x02PG4EcdFrHKluSEQQh4A==",
-    #     "TheaterCd": "LMP+XuzWskJLFG41YQ7HGA==",
-    #     "ISNormal": "3y+GIXzg3xKpOjlKjH8+Fg==",
-    #     "MovieGroupCd": "bNQovwyoamC5EsbGvSDIqw==",
-    #     "ScreenRatingCd": "nG6tVgEQPGU2GvOIdnwTjg==",
-    #     "MovieTypeCd": "/Saxvehmz4RPKZDKNMvSKQ==",
-    #     "Subtitle_CD": "nG6tVgEQPGU2GvOIdnwTjg==",
-    #     "SOUNDX_YN": "nG6tVgEQPGU2GvOIdnwTjg==",
-    #     "Third_Attr_CD": "nG6tVgEQPGU2GvOIdnwTjg==",
-    #     "Language": "zqWM417GS6dxQ7CIf65+iA==",
-    # },
-    # # 고질라 X 콩-뉴 엠파이어 용산아이파크몰 IMAX관
-    # {
-    #     'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-    #     'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-    #     'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-    #     'MovieGroupCd': 'rOV6MXDmdX4t5y4MUwm1SQ==',
-    #     'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-    #     'MovieTypeCd': '/Saxvehmz4RPKZDKNMvSKQ==',
-    #     'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    # },
-    # # 극장판하이큐!!쓰레기장의결전 용산아이파크몰 IMAX관
-    # {
-    #     'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-    #     'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-    #     'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-    #     'MovieGroupCd': 'rScFvvwEyPojN0wB3iaAJg==',
-    #     'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-    #     'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    # },
-    # # 혹성탈출-새로운시대 용산아이파크몰 IMAX관
-    # {
-    #     'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-    #     'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-    #     'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-    #     'MovieGroupCd': 'kWm88LTxi790bmsk4bHiOg==',
-    #     'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-    #     'MovieTypeCd': '/Saxvehmz4RPKZDKNMvSKQ==',
-    #     'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    # },
-    # #퓨리오사-매드맥스사가 용산아이파크몰 IMAX관
-    # {
-    #     'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-    #     'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-    #     'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-    #     'MovieGroupCd': 'Eclx6HdxURDc7ZSCEC1oVg==',
-    #     'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-    #     'MovieTypeCd': '/Saxvehmz4RPKZDKNMvSKQ==',
-    #     'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    # },
-    # # 나쁜녀석들-라이드오어다이 용산아이파크몰 IMAX관
-    # {
-    # 'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-    # 'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-    # 'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-    # 'MovieGroupCd': 'mgqEaWmqb6vUNc0jFeR+oQ==',
-    # 'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-    # 'MovieTypeCd': '/Saxvehmz4RPKZDKNMvSKQ==',
-    # 'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    # 'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    # 'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    # 'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    # },
-    # 명탐정코난-100만달러의펜타그램 용산아이파크몰 IMAX관
-    # {
-    #     'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-    #     'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-    #     'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-    #     'MovieGroupCd': 'sotE7BPGwguNFSYUhbmAmg==',
-    #     'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-    #     'MovieTypeCd': '/Saxvehmz4RPKZDKNMvSKQ==',
-    #     'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-    #     'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    # },
-]
+def _positive_int(name, default):
+    value = int(os.environ.get(name, str(default)))
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than zero")
+    return value
 
-# 변경사항을 확인할 타겟 이름 (json_data 순서대로)
-movie_target_name = [
-    # "DUNE-PART2-YONGSAN-IMAX",
-    # "GODZILLA-KONG",
-    # "HAIKU-YONGSAN-IMAX",
-    # "APES-YONGSAN-IMAX",
-    # "FURIOSA-YONGSAN-IMAX",
-    # "BADBOYS-YONGSAN-IMAX",
-    # "CONAN-YONGSAN-IMAX",
+
+def _non_negative_float(name, default):
+    value = float(os.environ.get(name, str(default)))
+    if value < 0:
+        raise ValueError(f"{name} must be zero or greater")
+    return value
+
+
+CGV_LOOKAHEAD_DAYS = _positive_int("CGV_LOOKAHEAD_DAYS", 14)
+CGV_POLL_INTERVAL_SECONDS = _positive_int("CGV_POLL_INTERVAL_SECONDS", 300)
+CGV_REQUEST_INTERVAL_SECONDS = _non_negative_float("CGV_REQUEST_INTERVAL_SECONDS", 1)
+CGV_RETRY_INITIAL_SECONDS = _positive_int("CGV_RETRY_INITIAL_SECONDS", 60)
+CGV_RETRY_MAX_SECONDS = _positive_int("CGV_RETRY_MAX_SECONDS", 900)
+
+
+# Site numbers were verified against the renewed CGV public theater list on 2026-09-03.
+SCREEN_TARGETS = [
+    {
+        "name": "YONGSAN-IMAX",
+        "site_no": "0013",
+        "site_name": "용산아이파크몰",
+        "keywords": ("IMAX",),
+    },
+    {
+        "name": "YONGSAN-4DX",
+        "site_no": "0013",
+        "site_name": "용산아이파크몰",
+        "keywords": ("4DX",),
+    },
+    {
+        "name": "YONGSAN-SCREENX",
+        "site_no": "0013",
+        "site_name": "용산아이파크몰",
+        "keywords": ("SCREENX",),
+    },
+    {
+        "name": "YEOUIDO-4DX",
+        "site_no": "0112",
+        "site_name": "여의도",
+        "keywords": ("4DX",),
+    },
+    {
+        "name": "CENTUM-IMAX",
+        "site_no": "0089",
+        "site_name": "센텀시티",
+        "keywords": ("IMAX",),
+    },
+    {
+        "name": "SEOMYEON-IMAX",
+        "site_no": "0005",
+        "site_name": "서면",
+        "keywords": ("IMAX",),
+    },
+    {
+        "name": "YEONGDEUNGPO-IMAX",
+        "site_no": "0059",
+        "site_name": "영등포타임스퀘어",
+        "keywords": ("IMAX",),
+    },
+    {
+        "name": "YEONGDEUNGPO-SCREENX",
+        "site_no": "0059",
+        "site_name": "영등포타임스퀘어",
+        "keywords": ("SCREENX",),
+    },
+    {
+        "name": "WANGSIMNI-IMAX",
+        "site_no": "0074",
+        "site_name": "왕십리",
+        "keywords": ("IMAX",),
+    },
 ]
 
 
+def enabled_screen_targets():
+    configured = os.environ.get("CGV_TARGET_NAMES", "").strip()
+    if not configured:
+        return SCREEN_TARGETS
 
-##################################################
-# cgv_open_push_screen.py
-
-screen_url = 'http://ticket.cgv.co.kr/CGV2011/RIA/CJ000.aspx/CJ_TICKET_SCHEDULE_TOTAL_PLAY_YMD'
-
-screen_cookies = {
-    '_INSIGHT_CK_1': 'f1d83d00493551cd7875517dd21cf81d|5e76eb13a569e162f1a8517dd21cf81d:1705916707000',
-    'WMONID': 'zvGaitKgTbw',
-    '_gid': 'GA1.3.1750462509.1711519151',
-    'ASP.NET_SessionId': 'o0453f5oqurfws4f1abdzxij',
-    '_gat_UA-47951671-5': '1',
-    '_gat_UA-47951671-7': '1',
-    '_gat_UA-47126437-1': '1',
-    '_gat': '1',
-    '_ga_559DE9WSKZ': 'GS1.1.1711547612.29.1.1711547816.58.0.0',
-    '_ga': 'GA1.1.1033028224.1705195852',
-    '_ga_SSGE1ZCJKG': 'GS1.3.1711547612.30.1.1711547816.59.0.0',
-}
-
-screen_headers = {
-    'Accept': 'application/json, text/javascript, */*; q=0.01',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Content-Type': 'application/json',
-    'Origin': 'http://ticket.cgv.co.kr',
-    'Pragma': 'no-cache',
-    'Referer': 'http://ticket.cgv.co.kr/Reservation/Reservation.aspx?MOVIE_CD=&MOVIE_CD_GROUP=&PLAY_YMD=&THEATER_CD=&PLAY_NUM=&PLAY_START_TM=&AREA_CD=&SCREEN_CD=&THIRD_ITEM=&SCREEN_RATING_CD=',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-    'X-Requested-With': 'XMLHttpRequest',
-}
-
-screen_json_data = [
-    # 용산아이파크몰 IMAX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 용산아이파크몰 4DX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': '9sxNW0kL/ZE3ioyEu1Em8w==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 용산아이파크몰 SCREENX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': 'LMP+XuzWskJLFG41YQ7HGA==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': '1WlMxB/T2xWstAhFsiNSfQ==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 여의도 4DX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': '5f4GX7Z6gNcCnYik++dJcA==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': '9sxNW0kL/ZE3ioyEu1Em8w==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 센텀 IMAX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': '2jX4VAQPhAUY/gxvZBhDdQ==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 서면 IMAX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': 'VCtDd13tWp85DXhl1ss+bw==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 영등포 IMAX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': 'Y5qC4mHnqFvPnE5/3487AQ==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 영등포 SCREENX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': 'Y5qC4mHnqFvPnE5/3487AQ==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': '1WlMxB/T2xWstAhFsiNSfQ==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-    # 왕십리 IMAX관
-    {
-        'REQSITE': 'x02PG4EcdFrHKluSEQQh4A==',
-        'TheaterCd': '2ziBKjUqqpsaZ8ii0eHHyg==',
-        'ISNormal': 'ECFppiyFz/nvSGsg7VwPQw==',
-        'MovieGroupCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'ScreenRatingCd': 'kXwoR3tnLM/+Tu0BILP3Qg==',
-        'MovieTypeCd': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Subtitle_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'SOUNDX_YN': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Third_Attr_CD': 'nG6tVgEQPGU2GvOIdnwTjg==',
-        'Language': 'zqWM417GS6dxQ7CIf65+iA==',
-    },
-]
-
-screen_target_name = [
-    "YONGSAN-IMAX",
-    "YONGSAN-4DX",
-    "YONGSAN-SCREENX",
-    "YEOUIDO-4DX",
-    "CENTUM-IMAX",
-    "SEOMYEON-IMAX",
-    "YEONGDEUNGPO-IMAX",
-    "YEONGDEUNGPO-SCREENX",
-    "WANGSIMNI-IMAX",
-]
+    names = {name.strip().upper() for name in configured.split(",") if name.strip()}
+    targets = [target for target in SCREEN_TARGETS if target["name"] in names]
+    unknown = names - {target["name"] for target in SCREEN_TARGETS}
+    if unknown:
+        raise ValueError(f"Unknown CGV_TARGET_NAMES: {', '.join(sorted(unknown))}")
+    if not targets:
+        raise ValueError("CGV_TARGET_NAMES did not enable any targets")
+    return targets

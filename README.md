@@ -55,6 +55,10 @@ image_by_<a href="https://kr.freepik.com/free-photo/3d-render-notification-bell-
 Git에 포함되지 않는 Docker 데이터 볼륨에 저장합니다. 상세 설정과 검증 명령은
 [빌드·테스트·실행 문서](Docs/Technical/BUILD_TEST_RUN.md)를 확인하세요.
 
+CGV 리뉴얼 이후의 JSON 상영시간표를 조회하며, 기본 설정은 용산·여의도·센텀시티·서면·
+영등포타임스퀘어·왕십리의 IMAX/4DX/SCREENX 9개 대상을 감시합니다. `CGV_TARGET_NAMES`로
+필요한 대상만 선택할 수 있습니다.
+
 <br>
 <br>
 
@@ -84,8 +88,8 @@ Git에 포함되지 않는 Docker 데이터 볼륨에 저장합니다. 상세 �
 - 안전한 빌드·검증 절차: [Docs/Technical/BUILD_TEST_RUN.md](Docs/Technical/BUILD_TEST_RUN.md)
 - 진행 중인 장기 작업: [Docs/Work/ACTIVE.md](Docs/Work/ACTIVE.md)
 
-저장소에 추적된 실행 코드는 CGV 리뉴얼 이전의 `v1`입니다. 현재 운영 가능 여부는 위 구현
-상태와 검증 기록을 확인해주세요.
+저장소에 추적된 `v1` 실행 코드는 현재 CGV JSON 일정 계약에 맞게 갱신되었습니다. 전체 기본
+대상의 운영 검증 범위와 남은 위험은 위 구현 상태와 검증 기록을 확인해주세요.
 
 <br>
 <br>

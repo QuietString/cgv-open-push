@@ -1,0 +1,42 @@
+{
+  "statusCode": 0,
+  "statusMessage": "조회 되었습니다.",
+  "data": [
+    {
+      "siteNo": "0013",
+      "siteNm": "CGV 용산아이파크몰",
+      "scnsNo": "003",
+      "scnsNm": "4DX관",
+      "expoScnsNm": "4DX관",
+      "scnYmd": "20260903",
+      "scnSseq": "1",
+      "prodNo": "20054744",
+      "expoProdNm": "오디세이(4DX 2D)",
+      "movNm": "오디세이",
+      "movkndDsplNm": "4DX 2D",
+      "movkndDsplEnm": "4DX 2D",
+      "scnsrtTm": "0930",
+      "scnendTm": "1232",
+      "frSeatCnt": "20",
+      "cntlYn": "N"
+    },
+    {
+      "siteNo": "0013",
+      "siteNm": "CGV 용산아이파크몰",
+      "scnsNo": "004",
+      "scnsNm": "SCREENX관 (리클라이너) with PRIVATE BOX",
+      "expoScnsNm": "SCREENX관 (리클라이너) with PRIVATE BOX",
+      "scnYmd": "20260903",
+      "scnSseq": "1",
+      "prodNo": "20054746",
+      "expoProdNm": "스파이더맨-브랜드 뉴 데이(4면, SCREENX DOLBY ATMOS mix 2D)",
+      "movNm": "스파이더맨-브랜드 뉴 데이",
+      "movkndDsplNm": "SCREENX DOLBY ATMOS mix 2D",
+      "movkndDsplEnm": "SCREENX DOLBY ATMOS mix 2D",
+      "scnsrtTm": "0740",
+      "scnendTm": "1015",
+      "frSeatCnt": "137",
+      "cntlYn": "N"
+    }
+  ]
+}

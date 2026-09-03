@@ -6,19 +6,16 @@ from logging.handlers import RotatingFileHandler
 
 from cgv_open_push_function import save_log_error, save_log_info
 from cgv_open_push_global_variable import (
-    movie_cookies,
-    movie_headers,
-    movie_json_data,
-    movie_target_name,
-    movie_url,
-    screen_cookies,
-    screen_headers,
-    screen_json_data,
-    screen_target_name,
-    screen_url,
+    CGV_API_URL,
+    CGV_HEADERS,
+    CGV_LOOKAHEAD_DAYS,
+    CGV_POLL_INTERVAL_SECONDS,
+    CGV_REQUEST_INTERVAL_SECONDS,
+    CGV_RETRY_INITIAL_SECONDS,
+    CGV_RETRY_MAX_SECONDS,
+    enabled_screen_targets,
 )
 from cgv_open_push_kakao import KakaoConfig, KakaoNotifier
-from cgv_open_push_movie import movie_main
 from cgv_open_push_screen import screen_main
 from cgv_open_push_status import run_status_server
 
@@ -49,39 +46,24 @@ def start_processes(message_queue):
     processes.append(status_process)
     status_process.start()
 
-    for index, json_data in enumerate(movie_json_data):
-        process = multiprocessing.Process(
-            target=movie_main,
-            args=(
-                movie_url,
-                movie_cookies,
-                movie_headers,
-                json_data,
-                movie_target_name[index],
-                message_queue,
-            ),
-            name=f"movie-{movie_target_name[index]}",
-        )
-        processes.append(process)
-        process.start()
-        time.sleep(1)
-
-    for index, json_data in enumerate(screen_json_data):
-        process = multiprocessing.Process(
-            target=screen_main,
-            args=(
-                screen_url,
-                screen_cookies,
-                screen_headers,
-                json_data,
-                screen_target_name[index],
-                message_queue,
-            ),
-            name=f"screen-{screen_target_name[index]}",
-        )
-        processes.append(process)
-        process.start()
-        time.sleep(1)
+    targets = enabled_screen_targets()
+    schedule_process = multiprocessing.Process(
+        target=screen_main,
+        args=(
+            CGV_API_URL,
+            CGV_HEADERS,
+            targets,
+            message_queue,
+            CGV_LOOKAHEAD_DAYS,
+            CGV_POLL_INTERVAL_SECONDS,
+            CGV_REQUEST_INTERVAL_SECONDS,
+            CGV_RETRY_INITIAL_SECONDS,
+            CGV_RETRY_MAX_SECONDS,
+        ),
+        name="cgv-schedule-worker",
+    )
+    processes.append(schedule_process)
+    schedule_process.start()
 
     return processes
 

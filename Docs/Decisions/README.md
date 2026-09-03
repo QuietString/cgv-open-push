@@ -4,11 +4,11 @@
 >
 > Owner: Project team
 >
-> Last verified: 2026-09-01
+> Last verified: 2026-09-03
 >
 > Verified against: `Docs/Decisions/`
 
-One ADR has been accepted.
+Two ADRs have been accepted.
 
 Create an ADR from [`../Templates/ADR_TEMPLATE.md`](../Templates/ADR_TEMPLATE.md) when a decision:
 
@@ -26,3 +26,4 @@ when their rationale remains useful. Small local implementation choices do not n
 | ADR | State | Decision date | Summary |
 |---|---|---|---|
 | [`ADR-0001`](ADR-0001-kakao-self-message.md) | Accepted | 2026-09-01 | Use Kakao self-message as the notification transport |
+| [`ADR-0002`](ADR-0002-current-cgv-json-contract.md) | Accepted | 2026-09-03 | Use the renewed CGV JSON booking contract and a browser-compatible client |
