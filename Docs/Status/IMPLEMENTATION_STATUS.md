@@ -18,7 +18,8 @@
 | CGV polling | Verified | public catalog confirms the three selected sites; final-image current-date requests succeeded for all three, including mixed-site filtering | Re-probe after endpoint, query, TLS-client, or schema changes |
 | Change detection | Verified | fixtures and scheduler tests cover separate theater alerts, partial-date baselines, booking-control transition, recovery without duplicates, and horizon rollover | Expand fixtures if stable format codes replace keyword filters |
 | Worker supervision | Verified | offline final-image smoke held main/status/worker processes, emitted one captured message per theater, and retried only the failed date between normal rounds | Retain limits and re-test after process-model or retry changes |
-| Kakao self-message | Verified | owner-confirmed test delivery plus a 2026-09-03 container token refresh through the mounted `/data` path | Monitor refresh-token expiry and reauthorize when required |
+| Kakao self-message delivery | Verified | owner-confirmed chat delivery plus a 2026-09-03 token refresh and an additional owner-requested isolated send with exit code 0 | This verifies chat delivery, not device push alerts; monitor token expiry |
+| Device push alerts | Blocked | the only current transport is Kakao self-message, which does not generate notifications by design; see ISSUE-011 | Select a push-capable transport with the owner before implementing a replacement or supplement |
 | Discord delivery | Deprecated | Discord dependency, token lookup, channel routing, and sender were removed in favor of ADR-0001 | None unless multi-transport support is requested |
 | Slack delivery | Planned | feasibility assessed; no Slack source or configuration is tracked | Define notifier boundary and select webhook or Web API contract |
 | Status page | Partial | limited containers returned `/` 200, empty-log `/healthz` 503, and active-log `/healthz` 200 through `127.0.0.1`; log text is escaped | Add authentication before any non-local exposure |
@@ -41,6 +42,20 @@ Use `Verified` only when reproducible evidence has passed after the relevant cha
 - Normal request budget: 42 per five-minute round; only failed site/date requests receive extra retries
 - Automated tests: 29 focused unit tests in 4 files, one minimized JSON fixture, and one offline process smoke
 - Container orchestration file: none
+
+## Self-message notification validation record
+
+On 2026-09-03:
+
+- The owner reported messages appearing in the self-chat without ordinary incoming-message alerts.
+- [Kakao's official response](https://devtalk.kakao.com/t/rest-api/142306) states that self-message is
+  for memos and does not generate notifications. Delivery success must not be presented as push success.
+- One owner-requested test used image `sha256:45d244e98d98d5086f8c8296b0ca422824585da32ea0404fca915e1856923250`
+  and `cgv_open_push_kakao_send_test.py`, with a read-only root, 0.5 CPU, 128 MiB, PID limit 16,
+  no restart, no published ports, mounted token data, and a 15-second request timeout.
+- The sender printed `Kakao self-message test succeeded.` and exited 0 (the sender requires
+  `result_code: 0`). No CGV watcher ran. Receipt of this specific message has not yet been confirmed
+  by the owner; no push-capable transport was added.
 
 ## Baseline validation record
 
