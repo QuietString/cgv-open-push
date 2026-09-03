@@ -40,51 +40,15 @@ SCREEN_TARGETS = [
         "keywords": ("IMAX",),
     },
     {
-        "name": "YONGSAN-4DX",
-        "site_no": "0013",
-        "site_name": "용산아이파크몰",
-        "keywords": ("4DX",),
-    },
-    {
-        "name": "YONGSAN-SCREENX",
-        "site_no": "0013",
-        "site_name": "용산아이파크몰",
-        "keywords": ("SCREENX",),
-    },
-    {
-        "name": "YEOUIDO-4DX",
-        "site_no": "0112",
-        "site_name": "여의도",
-        "keywords": ("4DX",),
-    },
-    {
-        "name": "CENTUM-IMAX",
-        "site_no": "0089",
-        "site_name": "센텀시티",
-        "keywords": ("IMAX",),
-    },
-    {
-        "name": "SEOMYEON-IMAX",
-        "site_no": "0005",
-        "site_name": "서면",
-        "keywords": ("IMAX",),
-    },
-    {
-        "name": "YEONGDEUNGPO-IMAX",
-        "site_no": "0059",
-        "site_name": "영등포타임스퀘어",
-        "keywords": ("IMAX",),
-    },
-    {
-        "name": "YEONGDEUNGPO-SCREENX",
-        "site_no": "0059",
-        "site_name": "영등포타임스퀘어",
-        "keywords": ("SCREENX",),
-    },
-    {
         "name": "WANGSIMNI-IMAX",
         "site_no": "0074",
         "site_name": "왕십리",
+        "keywords": ("IMAX",),
+    },
+    {
+        "name": "APGUJEONG-IMAX",
+        "site_no": "0040",
+        "site_name": "압구정",
         "keywords": ("IMAX",),
     },
 ]

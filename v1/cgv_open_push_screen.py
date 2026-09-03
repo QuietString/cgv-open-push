@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from cgv_open_push_function import (
@@ -50,42 +51,16 @@ def add_schedules_to_snapshot(snapshot, schedules, targets):
                 snapshot[target["name"]][schedule_key(schedule)] = schedule
 
 
-def collect_schedule_snapshot(
-    url,
-    headers,
-    targets,
-    lookahead_days,
-    request_interval_seconds,
-    request_function=None,
-    sleep_function=time.sleep,
-    today=None,
-):
-    request_function = request_function or get_request_to_cgv_api
-    snapshot = {target["name"]: {} for target in targets}
-    targets_by_site = defaultdict(list)
-    for target in targets:
-        targets_by_site[target["site_no"]].append(target)
-
-    jobs = [
-        (site_no, scn_ymd, site_targets)
-        for site_no, site_targets in targets_by_site.items()
-        for scn_ymd in dates_to_scan(lookahead_days, today=today)
-    ]
-    for index, (site_no, scn_ymd, site_targets) in enumerate(jobs):
-        params = {
-            "coCd": CGV_COMPANY_CODE,
-            "siteNo": site_no,
-            "scnYmd": scn_ymd,
-            "scnsNo": "",
-            "scnSseq": "",
-            "rtctlScopCd": "08",
-            "custNo": "",
-        }
-        schedules = request_function(url, headers, params, f"{site_no}:{scn_ymd}")
-        add_schedules_to_snapshot(snapshot, schedules, site_targets)
-        if request_interval_seconds and index < len(jobs) - 1:
-            sleep_function(request_interval_seconds)
-    return snapshot
+def schedule_request_params(site_no, scn_ymd):
+    return {
+        "coCd": CGV_COMPANY_CODE,
+        "siteNo": site_no,
+        "scnYmd": scn_ymd,
+        "scnsNo": "",
+        "scnSseq": "",
+        "rtctlScopCd": "08",
+        "custNo": "",
+    }
 
 
 def describe_schedule(schedule):
@@ -135,6 +110,152 @@ def enqueue_added_schedules(
     return notification_count
 
 
+@dataclass(frozen=True)
+class RequestRetry:
+    next_attempt_at: float
+    delay_seconds: float
+
+
+class SchedulePoller:
+    """One sequential worker with independent site/date baselines and retry deadlines."""
+
+    def __init__(
+        self,
+        url,
+        headers,
+        targets,
+        message_queue,
+        lookahead_days,
+        poll_interval_seconds,
+        request_interval_seconds,
+        retry_initial_seconds,
+        retry_max_seconds,
+        *,
+        request_function=None,
+        clock=None,
+        sleep_function=None,
+        today_function=None,
+    ):
+        self.url = url
+        self.headers = headers
+        self.targets_by_site = defaultdict(list)
+        for target in targets:
+            self.targets_by_site[target["site_no"]].append(target)
+        self.message_queue = message_queue
+        self.lookahead_days = lookahead_days
+        self.poll_interval_seconds = poll_interval_seconds
+        self.request_interval_seconds = request_interval_seconds
+        self.retry_initial_seconds = retry_initial_seconds
+        self.retry_max_seconds = retry_max_seconds
+        self.request = request_function or get_request_to_cgv_api
+        self.clock = clock or time.monotonic
+        self.sleep = sleep_function or time.sleep
+        self.today = today_function or (lambda: datetime.now(KST).date())
+        self.snapshots = {}
+        self.retries = {}
+        self.next_poll_at = self.clock()
+        self.next_request_at = self.next_poll_at
+
+    def poll_once(self):
+        """Run a normal round or only due retries; flush alerts after each theater."""
+        cycle_started = self.clock()
+        dates = dates_to_scan(self.lookahead_days, today=self.today())
+        active_jobs = {(site, day) for site in self.targets_by_site for day in dates}
+        self.snapshots = {key: value for key, value in self.snapshots.items() if key in active_jobs}
+        self.retries = {key: value for key, value in self.retries.items() if key in active_jobs}
+        normal_round = cycle_started >= self.next_poll_at
+        if normal_round:
+            self.next_poll_at = cycle_started + self.poll_interval_seconds
+
+        attempts = 0
+        for site_no, targets in self.targets_by_site.items():
+            due = []
+            for day in dates:
+                key = (site_no, day)
+                retry = self.retries.get(key)
+                if (retry and retry.next_attempt_at <= cycle_started) or (
+                    normal_round and retry is None
+                ):
+                    due.append(key)
+            if not due:
+                continue
+
+            previous = {target["name"]: {} for target in targets}
+            current = {target["name"]: {} for target in targets}
+            initialized_dates = set()
+            successful = {}
+            for key in due:
+                delay = self.next_request_at - self.clock()
+                if delay > 0:
+                    self.sleep(delay)
+                attempts += 1
+                try:
+                    schedules = self.request(
+                        self.url, self.headers, schedule_request_params(*key), f"{key[0]}:{key[1]}"
+                    )
+                    # CGV can include a co-located CINE de CHEF site in the same response.
+                    schedules = [
+                        schedule for schedule in schedules
+                        if str(schedule["siteNo"]) == key[0] and str(schedule["scnYmd"]) == key[1]
+                    ]
+                    snapshot = {target["name"]: {} for target in targets}
+                    add_schedules_to_snapshot(snapshot, schedules, targets)
+                except Exception as error:
+                    last_retry = self.retries.get(key)
+                    retry_delay = min(
+                        last_retry.delay_seconds * 2 if last_retry else self.retry_initial_seconds,
+                        self.retry_max_seconds,
+                    )
+                    self.retries[key] = RequestRetry(self.clock() + retry_delay, retry_delay)
+                    save_log_error(
+                        f"CGV request failed {key[0]}:{key[1]}; retry in {retry_delay}s: {error}"
+                    )
+                    continue
+                finally:
+                    # The spacing limit also covers failed requests, theaters, and retry-only passes.
+                    self.next_request_at = self.clock() + self.request_interval_seconds
+
+                successful[key] = snapshot
+                if key in self.snapshots:
+                    initialized_dates.add(key[1])
+                    for target in targets:
+                        name = target["name"]
+                        previous[name].update(self.snapshots[key][name])
+                for target in targets:
+                    name = target["name"]
+                    current[name].update(snapshot[name])
+
+            # Failed dates never enter this comparison or replace their last successful baseline.
+            enqueue_added_schedules(
+                previous, current, targets, self.message_queue,
+                previously_scanned_dates=initialized_dates,
+            )
+            for key, snapshot in successful.items():
+                self.snapshots[key] = snapshot
+                self.retries.pop(key, None)
+            for target in targets:
+                count = sum(
+                    len(snapshot[target["name"]])
+                    for key, snapshot in self.snapshots.items() if key[0] == site_no
+                )
+                save_log_info(
+                    f"{target['name']} schedule count : {count}; "
+                    f"refreshed dates : {len(successful)}; failed dates : {len(due) - len(successful)}"
+                )
+        return attempts
+
+    def seconds_until_next_pass(self):
+        deadlines = [self.next_poll_at]
+        deadlines.extend(retry.next_attempt_at for retry in self.retries.values())
+        # Revisit the KST horizon regularly so expired-date retries and snapshots are discarded.
+        return min(60, max(0, min(deadlines) - self.clock()))
+
+    def run(self):
+        while True:
+            self.poll_once()
+            self.sleep(self.seconds_until_next_pass())
+
+
 def screen_main(
     url,
     headers,
@@ -146,42 +267,7 @@ def screen_main(
     retry_initial_seconds,
     retry_max_seconds,
 ):
-    previous = None
-    previous_dates = None
-    retry_delay = retry_initial_seconds
-
-    while True:
-        cycle_started = time.monotonic()
-        try:
-            current_day = datetime.now(KST).date()
-            current_dates = set(dates_to_scan(lookahead_days, today=current_day))
-            current = collect_schedule_snapshot(
-                url,
-                headers,
-                targets,
-                lookahead_days,
-                request_interval_seconds,
-                today=current_day,
-            )
-            for target in targets:
-                save_log_info(
-                    f"{target['name']} schedule count : {len(current[target['name']])}"
-                )
-
-            if previous is not None:
-                enqueue_added_schedules(
-                    previous,
-                    current,
-                    targets,
-                    message_queue,
-                    previously_scanned_dates=previous_dates,
-                )
-            previous = current
-            previous_dates = current_dates
-            retry_delay = retry_initial_seconds
-            elapsed = time.monotonic() - cycle_started
-            time.sleep(max(0, poll_interval_seconds - elapsed))
-        except Exception as error:
-            save_log_error(f"CGV schedule worker error : {error}")
-            time.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, retry_max_seconds)
+    SchedulePoller(
+        url, headers, targets, message_queue, lookahead_days, poll_interval_seconds,
+        request_interval_seconds, retry_initial_seconds, retry_max_seconds,
+    ).run()

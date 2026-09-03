@@ -48,21 +48,20 @@ docker run --rm `
   -m unittest discover -s tests -v
 ```
 
-The 2026-09-03 suite contains 15 CGV contract, schedule fixture/change, Kakao, and worker-retry tests.
-The final image was `sha256:a7d6f98f3743945648f8482362a0e91682198b9831e399de0f7c4cd9dda3bf43`
-and 67,210,080 bytes.
+The current suite contains 29 CGV contract, target/filter, Kakao, and isolated-retry tests. The
+2026-09-03 final image is `sha256:45d244e98d98d5086f8c8296b0ca422824585da32ea0404fca915e1856923250`
+and 67,210,857 bytes. `tests/smoke_isolated_polling.py` is a separate bounded process smoke, not a
+unit test; it is excluded from the image and mounted only for validation.
 
 ## Configure CGV polling
 
 The default catalog contains these target names:
 
-- `YONGSAN-IMAX`, `YONGSAN-4DX`, `YONGSAN-SCREENX`
-- `YEOUIDO-4DX`
-- `CENTUM-IMAX`, `SEOMYEON-IMAX`
-- `YEONGDEUNGPO-IMAX`, `YEONGDEUNGPO-SCREENX`
-- `WANGSIMNI-IMAX`
+- `YONGSAN-IMAX`: 용산아이파크몰, site `0013`
+- `WANGSIMNI-IMAX`: 왕십리, site `0074`
+- `APGUJEONG-IMAX`: 압구정, site `0040`
 
-With an empty `CGV_TARGET_NAMES`, all nine are enabled. Use a comma-separated subset in `v1/.env`
+With an empty `CGV_TARGET_NAMES`, all three are enabled. Use a comma-separated subset in `v1/.env`
 when appropriate, for example:
 
 ```dotenv
@@ -70,11 +69,26 @@ CGV_TARGET_NAMES=YONGSAN-IMAX
 CGV_LOOKAHEAD_DAYS=14
 CGV_POLL_INTERVAL_SECONDS=300
 CGV_REQUEST_INTERVAL_SECONDS=1
+CGV_RETRY_INITIAL_SECONDS=60
+CGV_RETRY_MAX_SECONDS=900
 ```
 
-The defaults scan 14 dates across six unique sites: at most 84 sequential requests per cycle, with a
-one-second interval and no cycle starting sooner than every five minutes. Prefer a smaller target set
-or horizon when broader coverage is unnecessary. Unknown target names fail at startup.
+The defaults scan 14 dates across three unique sites: 42 sequential requests per healthy normal
+round, with one second after request completion and at least five minutes between round starts.
+That is nominally 504 requests/hour or 12,096/day when healthy rounds complete within five minutes.
+Retries add requests for failed keys only; these counts are not a hard aggregate quota.
+
+A failed site/date retains its last successful baseline and retries after 60, 120, 240, 480, then
+900 seconds, without sleeping the other jobs through that backoff. Normal rounds skip failed keys
+whose deadline is not due; successful recovery returns them to normal polling. The one-second
+spacing limit covers every request, including retries. A single in-flight timeout can still delay
+later work for up to the configured 20 seconds.
+
+Messages are queued after each theater's due dates are attempted, before the next theater. A failed
+date does not suppress successful-date notifications, and later recovery may produce another message
+for that same theater. First successful responses per site/date establish silent baselines. Snapshots
+remain in memory only. Unknown or removed target names fail at startup; replace old target overrides
+when deploying. Environment changes require recreating the container with the updated `--env-file`.
 
 ## Configure Kakao credentials
 
@@ -151,8 +165,45 @@ docker run --rm `
   -c "from datetime import datetime; from cgv_open_push_function import get_request_to_cgv_api; from cgv_open_push_global_variable import CGV_API_URL,CGV_HEADERS,CGV_COMPANY_CODE; from cgv_open_push_screen import KST; day=datetime.now(KST).strftime('%Y%m%d'); params={'coCd':CGV_COMPANY_CODE,'siteNo':'0013','scnYmd':day,'scnsNo':'','scnSseq':'','rtctlScopCd':'08','custNo':''}; schedules=get_request_to_cgv_api(CGV_API_URL,CGV_HEADERS,params,'0013:'+day); print('LIVE_CONTRACT_OK date='+day+' total='+str(len(schedules)))"
 ```
 
-On 2026-09-03 the final-image probe returned 126 schedules for Yongsan; the IMAX filter found six.
-A separate known-empty date returned `statusCode=0` with `data=[]`.
+During the earlier ADR-0002 validation on 2026-09-03, the then-current image returned 126 schedules
+for Yongsan; the IMAX filter found six. A separate known-empty date returned `statusCode=0` with `data=[]`.
+
+The later three-IMAX validation used one current-date request per selected site and found Yongsan 2,
+Wangsimni 2, and Apgujeong 1 matching schedule at 20:41 KST. These counts vary throughout the day.
+The public catalog verified Apgujeong as `0040`; its schedule response also contained CINE de CHEF
+site `P001`, which the watcher correctly ignores when building the requested site/date snapshot.
+
+## Offline isolated-retry runtime smoke
+
+This eight-second smoke starts the real main/status/worker process tree, replaces CGV and Kakao
+calls with in-memory fakes, and runs with networking disabled. It mounts only tests, not credentials.
+It verifies three independent messages, one isolated retry, continued healthy-theater progress,
+no duplicate messages on the next round, three Python processes, and container-local health HTTP 200.
+The short test intervals (3-second normal rounds and 1-second initial retry) never reach CGV.
+
+```powershell
+$TestPath = (Resolve-Path .\v1\tests).Path
+docker run --rm `
+  --name cgv-isolated-runtime-smoke `
+  --network none `
+  --pids-limit 16 `
+  --cpus 0.75 `
+  --memory 256m `
+  --read-only `
+  --tmpfs /tmp:rw,noexec,nosuid,size=32m `
+  -e PYTHONDONTWRITEBYTECODE=1 `
+  -e PYTHONPATH=/app `
+  -e KAKAO_REST_API_KEY=smoke-only `
+  -e KAKAO_CLIENT_SECRET=smoke-only `
+  -e KAKAO_REDIRECT_URI=http://localhost:8765/oauth/kakao/callback `
+  -e KAKAO_TOKEN_FILE=/tmp/unused-token.json `
+  -v "${TestPath}:/tests:ro" `
+  -w /tmp `
+  cgv-open-push:test /tests/smoke_isolated_polling.py
+```
+
+Success requires exit code 0 and `ISOLATED_SMOKE_OK`. Any "Kakao message sent" log in this smoke
+refers to the fake sender; no real message is sent. The temporary container is automatically removed.
 
 ## Resource-limited runtime smoke without messenger delivery
 

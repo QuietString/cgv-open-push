@@ -4,7 +4,7 @@
 - Date: 2026-09-03
 - Owners/approvers: Project owner
 - Related tasks/context: [`../Work/Archive/TASK-0002-repair-cgv-contract.md`](../Work/Archive/TASK-0002-repair-cgv-contract.md), [`../Technical/ARCHITECTURE.md`](../Technical/ARCHITECTURE.md)
-- Supersedes/superseded by: N/A
+- Supersedes/superseded by: Polling cadence, catalog, and snapshot granularity updated by [ADR-0003](ADR-0003-isolated-site-date-retries.md); the HTTP contract remains accepted.
 
 ## Context
 

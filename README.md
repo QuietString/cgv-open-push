@@ -55,9 +55,10 @@ image_by_<a href="https://kr.freepik.com/free-photo/3d-render-notification-bell-
 Git에 포함되지 않는 Docker 데이터 볼륨에 저장합니다. 상세 설정과 검증 명령은
 [빌드·테스트·실행 문서](Docs/Technical/BUILD_TEST_RUN.md)를 확인하세요.
 
-CGV 리뉴얼 이후의 JSON 상영시간표를 조회하며, 기본 설정은 용산·여의도·센텀시티·서면·
-영등포타임스퀘어·왕십리의 IMAX/4DX/SCREENX 9개 대상을 감시합니다. `CGV_TARGET_NAMES`로
-필요한 대상만 선택할 수 있습니다.
+CGV 리뉴얼 이후의 JSON 상영시간표를 조회하며, 현재 기본 설정은 **용산아이파크몰·왕십리·
+압구정 IMAX** 3개 대상입니다. `CGV_TARGET_NAMES`로 이 중 필요한 대상만 선택할 수 있습니다.
+5분마다 오늘부터 14일치를 순차 조회하며 정상 조회는 한 주기당 42건입니다. 알림은 지점별로
+따로 보내고, 실패한 지점·날짜 요청만 별도 재시도하므로 나머지 조회와 알림을 중단하지 않습니다.
 
 <br>
 <br>

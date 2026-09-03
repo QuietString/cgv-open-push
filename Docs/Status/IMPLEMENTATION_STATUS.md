@@ -6,24 +6,24 @@
 >
 > Last verified: 2026-09-03
 >
-> Verified against: current Git tree, first-party CGV page assets, bounded live probes, 15 tests, the 2026-09-03 Docker build, and resource-limited smoke output
+> Verified against: current Git tree, public CGV catalog and three-site live probes, 29 tests, the 2026-09-03 Docker build, and offline isolated-retry smoke output
 
 ## Status matrix
 
 | Area | State | Evidence | Next step |
 |---|---|---|---|
 | Agent context system | Verified | root `AGENTS.md`, indexed context files, templates, and validator; validator passed on 2026-09-01 | Re-run after context-policy or document-structure changes |
-| Python syntax | Verified | all nine `v1/*.py` files compiled successfully on 2026-09-01 | Re-run after Python changes |
-| Docker toolchain | Verified | Docker engine 29.7.2 built image `sha256:a7d6f98...`; the final image ran all tests and a bounded live probe | Rebuild after dependency or Dockerfile changes |
-| CGV polling | Verified | final-image probes returned HTTP 200 JSON, parsed 126 Yongsan schedules including six IMAX schedules, and accepted an empty date as `[]` | Re-probe after endpoint, query, TLS-client, or schema changes |
-| Change detection | Verified | minimized current-response fixture proves target filtering, booking-control transition, and exactly one queued notification | Expand fixtures if stable format codes replace keyword filters |
-| Worker supervision | Verified | final limited container held one main, one status, and one schedule process with zero restarts while completing four successful 15-second polls | Retain limits and re-test after process-model or retry changes |
+| Python syntax | Verified | all nine image `v1/*.py` files passed AST parsing on 2026-09-03 | Re-run after Python changes |
+| Docker toolchain | Verified | rebuilt image `sha256:45d244e...` passed syntax/secret-exclusion checks, tests, three-site live probes, and offline runtime smoke | Rebuild after source, dependency, or Dockerfile changes |
+| CGV polling | Verified | public catalog confirms the three selected sites; final-image current-date requests succeeded for all three, including mixed-site filtering | Re-probe after endpoint, query, TLS-client, or schema changes |
+| Change detection | Verified | fixtures and scheduler tests cover separate theater alerts, partial-date baselines, booking-control transition, recovery without duplicates, and horizon rollover | Expand fixtures if stable format codes replace keyword filters |
+| Worker supervision | Verified | offline final-image smoke held main/status/worker processes, emitted one captured message per theater, and retried only the failed date between normal rounds | Retain limits and re-test after process-model or retry changes |
 | Kakao self-message | Verified | owner-confirmed test delivery plus a 2026-09-03 container token refresh through the mounted `/data` path | Monitor refresh-token expiry and reauthorize when required |
 | Discord delivery | Deprecated | Discord dependency, token lookup, channel routing, and sender were removed in favor of ADR-0001 | None unless multi-transport support is requested |
 | Slack delivery | Planned | feasibility assessed; no Slack source or configuration is tracked | Define notifier boundary and select webhook or Web API contract |
 | Status page | Partial | limited containers returned `/` 200, empty-log `/healthz` 503, and active-log `/healthz` 200 through `127.0.0.1`; log text is escaped | Add authentication before any non-local exposure |
-| Automated tests | Verified | 15 focused CGV contract, current fixture/change detection, Kakao, and worker-retry tests passed in the final image | Add coverage with each material behavior change |
-| Production operation | Partial | all recovery criteria passed individually and a one-target no-message container passed; the full default target set plus real Kakao delivery has not been run together | Run the first full deployment in the foreground with owner approval for its startup message |
+| Automated tests | Verified | 29 focused tests plus a separate offline process smoke passed with the rebuilt image | Add coverage with each material behavior change |
+| Production operation | Partial | each of the three targets passed a one-date live probe and isolated retry/delivery was validated offline; the full 14-day default horizon plus real Kakao delivery has not been run together | Run the first full deployment in the foreground with owner approval for its startup message |
 
 `Implemented` means code or documentation exists but the required current behavior has not been proven.
 Use `Verified` only when reproducible evidence has passed after the relevant change.
@@ -33,12 +33,13 @@ Use `Verified` only when reproducible evidence has passed after the relevant cha
 - Application versions: renewed CGV contract under historical directory name `v1`
 - Python source files: 9
 - Active movie-specific targets: 0
-- Active screen targets: 9
-- Unique CGV sites per default cycle: 6
+- Active screen targets: 3 (Yongsan, Wangsimni, Apgujeong IMAX)
+- Unique CGV sites per default cycle: 3
 - Default schedule horizon: 14 days with one-second sequential request spacing
 - Notification transports: Kakao self-message only
 - Durable state store: mounted Kakao OAuth token JSON only; CGV snapshots remain in memory
-- Automated tests: 15 focused unit tests in 4 files plus one minimized JSON fixture
+- Normal request budget: 42 per five-minute round; only failed site/date requests receive extra retries
+- Automated tests: 29 focused unit tests in 4 files, one minimized JSON fixture, and one offline process smoke
 - Container orchestration file: none
 
 ## Baseline validation record
@@ -108,3 +109,24 @@ On 2026-09-03:
 - The final limited run completed four successful 15-second Yongsan IMAX polls with a stable count of
   six and no queued schedule change
 - Temporary probe and smoke containers were removed; the rebuilt image remains locally available
+
+## Three-IMAX isolated-retry validation record
+
+On 2026-09-03, after the owner's target and retry changes:
+
+- Public catalog: Yongsan `0013`, Wangsimni `0074`, Apgujeong `0040` verified with one bounded request.
+- A draft strict site-ID check rejected legitimate co-located CINE de CHEF rows. A bounded shape
+  probe confirmed Apgujeong's response contains `0040` and `P001`; the final watcher filters site/date
+  rows without rejecting the valid response.
+- Final image: `sha256:45d244e98d98d5086f8c8296b0ca422824585da32ea0404fca915e1856923250`,
+  67,210,857 bytes; nine Python AST checks passed and image credentials were absent.
+- Final-image current-date probe at 20:41 KST: three requests succeeded, with matching IMAX counts
+  Yongsan 2, Wangsimni 2, and Apgujeong 1. No schedule messages were sent.
+- 29 unit tests passed, including selective retries, independent backoff, no early normal-round
+  retry, no duplicate retry at coincident deadlines, global spacing, mixed-site data, and date rollover.
+- Eight-second offline runtime smoke: network disabled, read-only root, 0.75 CPU, 256 MiB, PID limit
+  16, no published ports or token mount. Three Python processes stayed alive; local `/healthz` was 200.
+- Captured alert order was Wangsimni, Apgujeong, then recovered Yongsan, once each. Request trace
+  contained three normal rounds plus only one extra Yongsan retry (10 requests total), all mocked.
+- Temporary containers exited and were removed. No real Kakao message or unattended deployment
+  was started for this change.

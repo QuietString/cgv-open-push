@@ -12,3 +12,4 @@ project brief, technical document, or status document rather than only in this a
 |---|---|---|
 | [`TASK-0001`](TASK-0001-kakao-self-message.md) | 2026-09-03 | Replaced Discord delivery with verified Kakao self-message delivery and completed bounded Docker validation |
 | [`TASK-0002`](TASK-0002-repair-cgv-contract.md) | 2026-09-03 | Replaced the retired CGV endpoint with the current JSON schedule contract and verified bounded polling |
+| [`TASK-0003`](TASK-0003-isolate-imax-polling.md) | 2026-09-03 | Selected three IMAX theaters, isolated failed site/date retries, and verified independent notifications |

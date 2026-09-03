@@ -19,6 +19,7 @@
 | ISSUE-007 | Medium | Resolved | CGV headers, cookies, encrypted target values, channel IDs, and transport configuration were hard-coded together. | Stale cookies and encrypted values were removed; the target catalog contains public site/filter data, polling values and target selection accept environment overrides, and Kakao secrets remain separate. | Move the public catalog to an external config file if operators need arbitrary targets. |
 | ISSUE-008 | Medium | Resolved | The Discord reconnect loop could start the same background loop again. | Discord delivery and its asyncio lifecycle were removed under ADR-0001. | None. |
 | ISSUE-009 | Low | Resolved | Screen addition logging recorded the deleted value instead of the added value. | The rewritten added-item branch logs `added`; source compiled and focused tests passed. | Add broader change-detection fixtures under the general test backlog. |
+| ISSUE-010 | High | Resolved | One failed site/date used to abort the entire scan and defer every theater's notifications. | ADR-0003 adds per-key snapshots and retry deadlines; unit tests and an offline three-process smoke prove healthy-theater notifications continue and only the failed request retries. | Retain partial-baseline, recovery, date-rollover, and global-spacing coverage. |
 
 Keep issue IDs stable. Mark an issue `Resolved` only after the corrective behavior and required
 validation are recorded. Archive it only when the history no longer helps future maintenance.

@@ -3,10 +3,13 @@ import queue
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
+
+from cgv_open_push_global_variable import enabled_screen_targets
 
 from cgv_open_push_screen import (
     add_schedules_to_snapshot,
-    collect_schedule_snapshot,
+    SchedulePoller,
     enqueue_added_schedules,
     matches_target,
 )
@@ -41,27 +44,61 @@ class ScreenScheduleTests(unittest.TestCase):
         targets = [target("YONGSAN-4DX", "4DX"), target("YONGSAN-SCREENX", "SCREENX")]
         calls = []
         sleeps = []
+        clock = [0]
+
+        def sleep(seconds):
+            sleeps.append(seconds)
+            clock[0] += seconds
 
         def fake_request(url, headers, params, target_name):
             calls.append((params, target_name))
-            return self.schedules
+            return [dict(schedule, scnYmd=params["scnYmd"]) for schedule in self.schedules]
 
-        snapshot = collect_schedule_snapshot(
+        poller = SchedulePoller(
             "url",
             {},
             targets,
+            queue.Queue(),
             lookahead_days=2,
+            poll_interval_seconds=300,
             request_interval_seconds=0.25,
+            retry_initial_seconds=60,
+            retry_max_seconds=900,
             request_function=fake_request,
-            sleep_function=sleeps.append,
-            today=date(2026, 9, 3),
+            sleep_function=sleep,
+            clock=lambda: clock[0],
+            today_function=lambda: date(2026, 9, 3),
         )
+        poller.poll_once()
 
         self.assertEqual(2, len(calls))
         self.assertEqual(["20260903", "20260904"], [call[0]["scnYmd"] for call in calls])
         self.assertEqual([0.25], sleeps)
-        self.assertEqual(1, len(snapshot["YONGSAN-4DX"]))
-        self.assertEqual(1, len(snapshot["YONGSAN-SCREENX"]))
+        self.assertEqual(2, len(poller.snapshots))
+        for snapshot in poller.snapshots.values():
+            self.assertEqual(1, len(snapshot["YONGSAN-4DX"]))
+            self.assertEqual(1, len(snapshot["YONGSAN-SCREENX"]))
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_default_catalog_contains_only_requested_imax_theaters(self):
+        targets = enabled_screen_targets()
+        self.assertEqual(
+            [("YONGSAN-IMAX", "0013"), ("WANGSIMNI-IMAX", "0074"), ("APGUJEONG-IMAX", "0040")],
+            [(item["name"], item["site_no"]) for item in targets],
+        )
+        self.assertTrue(all(item["keywords"] == ("IMAX",) for item in targets))
+
+    @patch.dict("os.environ", {"CGV_TARGET_NAMES": "APGUJEONG-IMAX,WANGSIMNI-IMAX"})
+    def test_target_subset_uses_new_catalog(self):
+        self.assertEqual(
+            ["WANGSIMNI-IMAX", "APGUJEONG-IMAX"],
+            [item["name"] for item in enabled_screen_targets()],
+        )
+
+    @patch.dict("os.environ", {"CGV_TARGET_NAMES": "YONGSAN-4DX"})
+    def test_removed_target_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unknown CGV_TARGET_NAMES"):
+            enabled_screen_targets()
 
     def test_one_added_schedule_queues_exactly_one_notification(self):
         targets = [target("YONGSAN-4DX", "4DX")]

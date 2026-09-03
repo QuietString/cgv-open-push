@@ -36,7 +36,8 @@ bookable schedule data appears.
 ## Current scope
 
 - CGV schedule polling and opening-change detection
-- Theater/screen and optional movie-specific targets
+- Default monitoring of Yongsan, Wangsimni, and Apgujeong IMAX, with separate theater notifications
+- Isolated retries and last-successful baselines per site/date; optional movie-specific target support
 - Personal KakaoTalk "나와의 채팅방" notification delivery
 - Docker packaging and a lightweight status page
 - Future messenger integrations such as Slack are permitted when their configuration and delivery
